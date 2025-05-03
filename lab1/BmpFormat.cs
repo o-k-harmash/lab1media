@@ -44,4 +44,67 @@ public static class BmpFormat
         public byte Green;
         public byte Red;
     }
+
+
+    public static T ReadStruct<T>(BinaryReader reader) where T : struct
+    {
+        int size = Marshal.SizeOf<T>();
+        byte[] data = reader.ReadBytes(size);
+        GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
+        try
+        {
+            return Marshal.PtrToStructure<T>(handle.AddrOfPinnedObject());
+        }
+        finally
+        {
+            handle.Free();
+        }
+    }
+
+    public static void WriteStruct<T>(BinaryWriter writer, T value) where T : struct
+    {
+        int size = Marshal.SizeOf<T>();
+        byte[] buffer = new byte[size];
+        IntPtr ptr = Marshal.AllocHGlobal(size);
+        try
+        {
+            Marshal.StructureToPtr(value, ptr, false);
+            Marshal.Copy(ptr, buffer, 0, size);
+            writer.Write(buffer);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+    }
+
+    public static BitmapFileHeader CopyFileHeader(BitmapFileHeader fileHeader)
+    {
+        return new BitmapFileHeader
+        {
+            bfType = fileHeader.bfType,
+            bfSize = fileHeader.bfSize,
+            bfReserved1 = fileHeader.bfReserved1,
+            bfReserved2 = fileHeader.bfReserved2,
+            bfOffBits = fileHeader.bfOffBits
+        };
+    }
+
+    public static BitmapInfoHeader CopyInfoHeader(BitmapInfoHeader infoHeader)
+    {
+        return new BitmapInfoHeader
+        {
+            biSize = infoHeader.biSize,
+            biPlanes = infoHeader.biPlanes,
+            biBitCount = infoHeader.biBitCount,
+            biCompression = infoHeader.biCompression,
+            biXPelsPerMeter = infoHeader.biXPelsPerMeter,
+            biYPelsPerMeter = infoHeader.biYPelsPerMeter,
+            biClrImportant = infoHeader.biClrImportant,
+            biClrUsed = infoHeader.biClrUsed,
+            biWidth = infoHeader.biWidth,
+            biHeight = infoHeader.biHeight,
+            biSizeImage = infoHeader.biSizeImage
+        };
+    }
 }

@@ -12,3 +12,4 @@ C:\Users\plpllaola\Desktop\frontendmentor\playground\imglabs\lab1\obj\Debug\net9
 C:\Users\plpllaola\Desktop\frontendmentor\playground\imglabs\lab1\obj\Debug\net9.0\lab1.pdb
 C:\Users\plpllaola\Desktop\frontendmentor\playground\imglabs\lab1\obj\Debug\net9.0\lab1.genruntimeconfig.cache
 C:\Users\plpllaola\Desktop\frontendmentor\playground\imglabs\lab1\obj\Debug\net9.0\ref\lab1.dll
+C:\Users\plpllaola\Desktop\frontendmentor\playground\imglabs\lab1\obj\Debug\net9.0\lab1.sourcelink.json

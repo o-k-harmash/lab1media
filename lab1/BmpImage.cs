@@ -34,6 +34,71 @@ public class BmpImage
         Console.WriteLine($"Important Colors: {InfoHeader.biClrImportant}");
     }
 
+    public static bool[,] GetBinaryNeighborhood(RgbPixel[,] pixels, int row, int col)
+    {
+        int height = pixels.GetLength(0);
+        int width = pixels.GetLength(1);
+
+        bool[,] result = new bool[3, 3];
+
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int y = row + dy;
+                int x = col + dx;
+                int ry = dy + 1;
+                int rx = dx + 1;
+
+                if (y < 0 || y >= height || x < 0 || x >= width)
+                {
+                    result[ry, rx] = false;
+                }
+                else
+                {
+                    RgbPixel p = pixels[y, x];
+                    double gray = 0.299 * p.Red + 0.587 * p.Green + 0.114 * p.Blue;
+                    result[ry, rx] = gray < 128;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public BmpImage DeleteSomeLines()
+    {
+        int sourceWidth = Pixels.GetLength(1);
+        int sourceHeight = Pixels.GetLength(0);
+
+        // Создаем новую матрицу
+        RgbPixel[,] cropped = new RgbPixel[sourceHeight, sourceWidth];
+
+        // Копируем пиксели
+        for (int row = 0; row < sourceHeight; row++)
+        {
+            for (int col = 0; col < sourceWidth; col++)
+            {
+                var grid3x3 = GetBinaryNeighborhood(Pixels, row, col);
+                var gВ = !grid3x3[0, 1] && grid3x3[2, 1] && grid3x3[1, 1] && (!grid3x3[0, 0] && grid3x3[1, 2] || grid3x3[1, 0] && grid3x3[1, 2] || !grid3x3[0, 2] && grid3x3[1, 0]);
+                if (gВ)
+                {
+                    cropped[row, col] = new RgbPixel { Red = 255, Blue = 255, Green = 255 };
+                }
+            }
+        }
+
+        // Создаём копию с новыми параметрами
+        var copy = new BmpImage
+        {
+            FileHeader = BmpFormat.CopyFileHeader(FileHeader),
+            InfoHeader = BmpFormat.CopyInfoHeader(InfoHeader),
+            Pixels = cropped
+        };
+
+        return copy;
+    }
+
     public static BmpImage Load(string path)
     {
         var bmp = new BmpImage();
@@ -123,67 +188,85 @@ public class BmpImage
         // Создаём копию с новыми параметрами
         var copy = new BmpImage
         {
-            FileHeader = new BitmapFileHeader
-            {
-                bfType = this.FileHeader.bfType,
-                bfSize = this.FileHeader.bfSize,
-                bfReserved1 = this.FileHeader.bfReserved1,
-                bfReserved2 = this.FileHeader.bfReserved2,
-                bfOffBits = this.FileHeader.bfOffBits
-            },
-            InfoHeader = new BitmapInfoHeader
-            {
-                biSize = this.InfoHeader.biSize,
-                biPlanes = this.InfoHeader.biPlanes,
-                biBitCount = this.InfoHeader.biBitCount,
-                biCompression = this.InfoHeader.biCompression,
-                biXPelsPerMeter = this.InfoHeader.biXPelsPerMeter,
-                biYPelsPerMeter = this.InfoHeader.biYPelsPerMeter,
-                biClrImportant = this.InfoHeader.biClrImportant,
-                biClrUsed = this.InfoHeader.biClrUsed,
-
-                biWidth = width,
-                biHeight = height,
-                biSizeImage = (uint)(width * height * 3) // без паддингов
-            },
+            FileHeader = BmpFormat.CopyFileHeader(FileHeader),
+            InfoHeader = BmpFormat.CopyInfoHeader(InfoHeader),
             Pixels = cropped
         };
+
+        copy.InfoHeader.biWidth = width;
+        copy.InfoHeader.biHeight = height;
+        copy.InfoHeader.biSizeImage = (uint)(width * height * 3);// без паддингов
 
         copy.FileHeader.bfSize = (uint)(14 + copy.InfoHeader.biSize + copy.InfoHeader.biSizeImage);
 
         return copy;
     }
 
-
-    private static T ReadStruct<T>(BinaryReader reader) where T : struct
+    public BmpImage GrayscaleConversion()
     {
-        int size = Marshal.SizeOf<T>();
-        byte[] data = reader.ReadBytes(size);
-        GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-        try
+        int sourceWidth = Pixels.GetLength(1);
+        int sourceHeight = Pixels.GetLength(0);
+
+        // Создаем новую матрицу
+        RgbPixel[,] filtered = new RgbPixel[sourceHeight, sourceWidth];
+
+        // Копируем пиксели
+        for (int row = 0; row < sourceHeight; row++)
         {
-            return Marshal.PtrToStructure<T>(handle.AddrOfPinnedObject());
+            for (int col = 0; col < sourceWidth; col++)
+            {
+                var colorPixel = Pixels[row, col];
+                byte Y = (byte)(0.299 * colorPixel.Red + 0.587 * colorPixel.Green + 0.114 * colorPixel.Blue);
+                RgbPixel grayPixel = new RgbPixel { Red = Y, Green = Y, Blue = Y };
+                filtered[row, col] = grayPixel;
+            }
         }
-        finally
+
+        // Создаём копию с новыми параметрами
+        var copy = new BmpImage
         {
-            handle.Free();
-        }
+            FileHeader = BmpFormat.CopyFileHeader(FileHeader),
+            InfoHeader = BmpFormat.CopyInfoHeader(InfoHeader),
+            Pixels = filtered
+        };
+
+        return copy;
     }
 
-    private static void WriteStruct<T>(BinaryWriter writer, T value) where T : struct
+    public BmpImage BinaryConversion()
     {
-        int size = Marshal.SizeOf<T>();
-        byte[] buffer = new byte[size];
-        IntPtr ptr = Marshal.AllocHGlobal(size);
-        try
+        int sourceWidth = Pixels.GetLength(1);
+        int sourceHeight = Pixels.GetLength(0);
+
+        // Создаем новую матрицу
+        RgbPixel[,] filtered = new RgbPixel[sourceHeight, sourceWidth];
+
+        // Копируем пиксели
+        for (int row = 0; row < sourceHeight; row++)
         {
-            Marshal.StructureToPtr(value, ptr, false);
-            Marshal.Copy(ptr, buffer, 0, size);
-            writer.Write(buffer);
+            for (int col = 0; col < sourceWidth; col++)
+            {
+                var colorPixel = Pixels[row, col];
+                byte Y = (byte)(0.299 * colorPixel.Red + 0.587 * colorPixel.Green + 0.114 * colorPixel.Blue);
+                if (Y > 128)
+                {
+                    filtered[row, col] = new RgbPixel { Red = 255, Green = 255, Blue = 255 };
+                }
+                else
+                {
+                    filtered[row, col] = new RgbPixel { Red = 0, Green = 0, Blue = 0 };
+                }
+            }
         }
-        finally
+
+        // Создаём копию с новыми параметрами
+        var copy = new BmpImage
         {
-            Marshal.FreeHGlobal(ptr);
-        }
+            FileHeader = BmpFormat.CopyFileHeader(FileHeader),
+            InfoHeader = BmpFormat.CopyInfoHeader(InfoHeader),
+            Pixels = filtered
+        };
+
+        return copy;
     }
 }
