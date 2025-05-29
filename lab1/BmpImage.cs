@@ -9,6 +9,47 @@ public class BmpImage
     public BmpFormat.BitmapInfoHeader InfoHeader;
     public BmpFormat.RgbPixel[,] Pixels; // 2D-массив пикселей [y, x]
 
+    public int[] CountBlackPixelsByRow()
+    {
+        int width = InfoHeader.biWidth;
+        int height = Math.Abs(InfoHeader.biHeight);
+        int[] rowCounts = new int[height];
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (IsBlack(Pixels[y, x]))
+                    rowCounts[y]++;
+            }
+        }
+
+        return rowCounts;
+    }
+
+    public int[] CountBlackPixelsByColumn()
+    {
+        int width = InfoHeader.biWidth;
+        int height = Math.Abs(InfoHeader.biHeight);
+        int[] colCounts = new int[width];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (IsBlack(Pixels[y, x]))
+                    colCounts[x]++;
+            }
+        }
+
+        return colCounts;
+    }
+
+    public bool IsBlack(RgbPixel pixel)
+    {
+        return pixel.Red == 0 && pixel.Blue == 0 && pixel.Green == 0;
+    }
+
     public void Log()
     {
         // Логирование File Header
