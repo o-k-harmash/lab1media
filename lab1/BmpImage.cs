@@ -9,41 +9,86 @@ public class BmpImage
     public BmpFormat.BitmapInfoHeader InfoHeader;
     public BmpFormat.RgbPixel[,] Pixels; // 2D-массив пикселей [y, x]
 
-    public int[] CountBlackPixelsByRow()
+    public const int targetLength = 32; // например, 32 элемента — удобно и достаточно информативно
+
+    public bool[,] GetBinarizedColorPixelMatrix(BmpFormat.RgbPixel[,] pixels)
     {
-        int width = InfoHeader.biWidth;
-        int height = Math.Abs(InfoHeader.biHeight);
-        int[] rowCounts = new int[height];
+        int height = pixels.GetLength(0);
+        int width = pixels.GetLength(1);
+        bool[,] matrix = new bool[height, width];
 
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                if (IsBlack(Pixels[y, x]))
-                    rowCounts[y]++;
+                matrix[y, x] = IsBlack(pixels[y, x]);
             }
         }
 
-        return rowCounts;
+        return matrix;
     }
 
-    public int[] CountBlackPixelsByColumn()
+    public bool[,] ResizeBinaryNearest(bool[,] input, int newHeight, int newWidth)
     {
-        int width = InfoHeader.biWidth;
-        int height = Math.Abs(InfoHeader.biHeight);
-        int[] colCounts = new int[width];
+        int origHeight = input.GetLength(0);
+        int origWidth = input.GetLength(1);
+        bool[,] output = new bool[newHeight, newWidth];
+
+        for (int y = 0; y < newHeight; y++)
+        {
+            for (int x = 0; x < newWidth; x++)
+            {
+                int origY = (int)(y * origHeight / (double)newHeight);
+                int origX = (int)(x * origWidth / (double)newWidth);
+                output[y, x] = input[origY, origX];
+            }
+        }
+
+        return output;
+    }
+
+    public double[] GetNormalizedBlackPixelDensityPerRow(bool[,] pixels)
+    {
+        int height = pixels.GetLength(0);
+        int width = pixels.GetLength(1);
+        double[] result = new double[height];
+
+        for (int y = 0; y < height; y++)
+        {
+            int count = 0;
+            for (int x = 0; x < width; x++)
+            {
+                if (pixels[y, x])
+                    count++;
+            }
+
+            result[y] = count / (double)width;
+        }
+
+        return result;
+    }
+
+    public double[] GetNormalizedBlackPixelDensityPerColumn(bool[,] pixels)
+    {
+        int height = pixels.GetLength(0);
+        int width = pixels.GetLength(1);
+        double[] result = new double[width];
 
         for (int x = 0; x < width; x++)
         {
+            int count = 0;
             for (int y = 0; y < height; y++)
             {
-                if (IsBlack(Pixels[y, x]))
-                    colCounts[x]++;
+                if (pixels[y, x])
+                    count++;
             }
+
+            result[x] = count / (double)height;
         }
 
-        return colCounts;
+        return result;
     }
+
 
     public bool IsBlack(RgbPixel pixel)
     {
