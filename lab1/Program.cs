@@ -24,7 +24,7 @@
     и просто сравнивается с каждым эталоном через сумму разниц величин и находится тот у кого сумма минимальна
     на практике как-то 7 и 0 определяет и пойдет
 */
-var bmpImage = BmpImage.Load("precalculated-digit7-120+pixels.bmp");
+var bmpImage = BmpImage.Load("precalculated-digit7-60+pixels.bmp");
 
 var binarizedMatrix = bmpImage.GetBinarizedColorPixelMatrix(bmpImage.Pixels);
 var resizedMatrix = bmpImage.ResizeBinaryNearest(binarizedMatrix, 32, 32);
@@ -32,8 +32,27 @@ var resizedMatrix = bmpImage.ResizeBinaryNearest(binarizedMatrix, 32, 32);
 var horizontalDensity = bmpImage.GetNormalizedBlackPixelDensityPerRow(resizedMatrix);
 var verticalDensity = bmpImage.GetNormalizedBlackPixelDensityPerColumn(resizedMatrix);
 
-for (int i = 0; i < horizontalDensity.Length; i++)
-    Console.WriteLine(horizontalDensity[i]);
+for (int i = 0; i < verticalDensity.Length; i++)
+    Console.WriteLine(verticalDensity[i]);
+
+// Объединяем в один входной вектор
+var inputVector = horizontalDensity.Concat(verticalDensity).ToArray(); // [64]
+
+var neuralNet = new NeuralNetwork(); // из предыдущего сообщения
+
+// Создаем one-hot метку для цифры 7
+var label = new double[10];
+label[7] = 1.0;
+
+// Обучаем на этом одном примере
+var dataset = new List<(double[], double[])> { (inputVector, label) };
+neuralNet.Train(dataset, 10000); // 10 тыс эпох для стабильности
+
+// Проверяем результат
+var result = neuralNet.FeedForward(inputVector);
+int predicted = Array.IndexOf(result, result.Max());
+
+Console.WriteLine($"Ожидалось: 7, Предсказано: {predicted}, Вероятности: {string.Join(", ", result.Select(x => x.ToString("F2")))}");
 
 // for (int i = 0; i < verticalDensity.Length; i++)
 //     Console.WriteLine(verticalDensity[i]);
